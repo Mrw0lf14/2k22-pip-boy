@@ -122,8 +122,8 @@ int main(void)
   ST7789_Init();
   HAL_Delay(50);
 
-
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc, sizeof(adc));
+  //HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET|ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED);
+  //HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc, sizeof(adc));
 
 
   ST7789_InvertColors(0);
