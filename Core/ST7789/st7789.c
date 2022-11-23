@@ -825,14 +825,15 @@ void myfunc_test(void){
 	char string[64] = {0};
 	HAL_TIM_Base_Start_IT(&htim3);
 	myfunc_SetAddressWindow(0, 0, 239, 319);
-	for (uint8_t i = 0; i<50; i++){
+	uint8_t frames = 10;
+	for (uint8_t i = 0; i<frames; i++){
 		myfunc_DrawFilledRectangle(disp_buf, 0, 0, 240, 320, (uint16_t) random() % 0xFFFF);
 		myfunc_UpdateFrame(disp_buf);
 		myfunc_DrawFilledRectangle(disp_buf2, 0, 0, 240, 320, (uint16_t) random() % 0xFFFF);
 		myfunc_UpdateFrame(disp_buf2);
 	}
 	uint16_t time = timer;
-	uint16_t fps = 1000000/time;
+	uint16_t fps = frames * 100000/time;
 	snprintf(string, sizeof(string), "FPS: %d.%d", fps/100, fps%100);
 	ST7789_WriteString(10, 10, string, Font_16x26, BLACK, WHITE);
 	snprintf(string, sizeof(string), "TIME: %d.%d", time/100, time%100);
@@ -841,7 +842,7 @@ void myfunc_test(void){
 	while(1){
 		if(adc_ready == 1){
 			if(HAL_ADC_Start(&hadc1) != HAL_OK){
-				ST7789_WriteString(10, 100, "cant start adc conv", Font_16x26, BLACK, WHITE);
+				ST7789_WriteString(10, 100, "cant start adc regular", Font_16x26, BLACK, WHITE);
 				assert(0);
 			}
 			adc_ready = 0;
@@ -849,8 +850,20 @@ void myfunc_test(void){
 		if(HAL_ADC_PollForConversion(&hadc1, 1) == HAL_OK){
 			adc_ready = 1;
 			adc[0] = HAL_ADC_GetValue(&hadc1);
+		}
+		if(adc_ready == 1){
+			if(HAL_ADCEx_InjectedStart(&hadc1) != HAL_OK){
+				ST7789_WriteString(10, 100, "cant start adc injected", Font_16x26, BLACK, WHITE);
+				assert(0);
+			}
+			adc_ready = 0;
+		}
+		if(HAL_ADCEx_InjectedPollForConversion(&hadc1, 1) == HAL_OK){
+			adc_ready = 1;
+			adc[1] = HAL_ADCEx_InjectedGetValue(&hadc1, 1);
+			HAL_ADC_Stop(&hadc1);
 			char string[64] = {0};
-			snprintf(string, sizeof(string), "POS: %d.%d", adc[0], adc[1]);
+			snprintf(string, sizeof(string), "POS: %d.%d  ", adc[0], adc[1]);
 			ST7789_WriteString(10, 100, string, Font_16x26, BLACK, WHITE);
 		}
 	}

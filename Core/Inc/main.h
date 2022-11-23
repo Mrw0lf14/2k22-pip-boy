@@ -46,7 +46,7 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-extern uint16_t adc[2];
+extern volatile uint16_t adc[2];
 extern ADC_HandleTypeDef hadc1;
 extern TIM_HandleTypeDef htim3;
 extern uint16_t timer;
