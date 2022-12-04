@@ -49,6 +49,7 @@ extern "C" {
 extern volatile uint16_t adc[2];
 extern ADC_HandleTypeDef hadc1;
 extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim2;
 extern uint16_t timer;
 extern uint8_t adc_ready;
 /* USER CODE END EM */

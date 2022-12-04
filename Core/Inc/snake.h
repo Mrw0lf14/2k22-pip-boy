@@ -11,9 +11,9 @@ struct cell{
 	int8_t x;
 	int8_t y;
 };
-#define SNAKESIZE 20
-#define FIELDSIZE 16
-#define CELLSIZE 10
+#define SNAKESIZE 30
+#define FIELDSIZE 10
+#define CELLSIZE 20
 
 extern struct cell snake[SNAKESIZE];
 extern struct cell apple;

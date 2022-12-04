@@ -290,11 +290,11 @@ void ST7789_TearEffect(uint8_t tear);
 void ST7789_Test(void);
 
 /* My functions */
-void myfunc_DrawFilledRectangle(uint16_t* buf, uint16_t x0, uint16_t y0, uint16_t w, uint16_t h, uint16_t color);
-void myfunc_UpdateFrame(uint16_t* buf);
+void myfunc_DrawFilledRectangle(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h, uint16_t color);
+void myfunc_UpdateFrame();
 void myfunc_SetAddressWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
 void myfunc_test(void);
-
+void myfunc_FillWithColor(uint16_t color);
 
 struct frame {
     uint16_t x0;

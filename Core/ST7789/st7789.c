@@ -208,7 +208,7 @@ void ST7789_Fill_Color(uint16_t color)
 		for (i = 0; i < ST7789_HEIGHT / HOR_LEN; i++)
 		{
 			memset(disp_buf, color, sizeof(disp_buf));
-			ST7789_WriteData(disp_buf, sizeof(disp_buf));
+			ST7789_WriteData((uint8_t*)disp_buf, sizeof(disp_buf));
 		}
 	#else
 		uint16_t j;
@@ -751,6 +751,29 @@ void ST7789_Test(void)
 //----------------------------------------------
 /* My functions */
 //----------------------------------------------
+uint8_t buf1_busy = 0;
+void SendBuff_DMA(uint8_t *aTxBuff, uint16_t aCnt)
+{
+
+	while ((SPI1->SR & SPI_SR_TXP) == 0);
+	while ((SPI1->SR & SPI_SR_TXP) == 0);
+	DMA1_Stream0->CR &= ~(DMA_SxCR_EN); 	//выключаем DMA
+
+	//SPI1->CFG1 |= SPI_CFG1_TXDMAEN;			//включить отправку с помощью DMA
+	DMA1_Stream0->NDTR = aCnt;				//записываем колличество передаваемых данных
+	DMA1_Stream0->M0AR = (uint32_t)aTxBuff;	//записываем адрес начала буффера
+	DMA1_Stream0->PAR = (uint32_t)(&SPI1->TXDR);
+
+	DMA1->LIFCR = DMA_LIFCR_CFEIF3 | DMA_LIFCR_CDMEIF3 | DMA_LIFCR_CTEIF3 | DMA_LIFCR_CHTIF3 | DMA_LIFCR_CTCIF3;
+
+
+	DMA1_Stream0->CR |= DMA_SxCR_EN;		//включаем DMA
+
+	SPI1->CR1 |= SPI_CR1_CSTART;				//начать отправлять данные
+	SPI1->IER |= SPI_IER_EOTIE | SPI_IER_RXPIE ; //включить прерывания spi
+
+
+}
 
 static void myfunc_WriteData(uint8_t *buff, size_t buff_size)
 {
@@ -759,7 +782,8 @@ static void myfunc_WriteData(uint8_t *buff, size_t buff_size)
 	uint16_t chunk_size = buff_size > 65535 ? 65535 : buff_size;
 	if (DMA_MIN_SIZE <= buff_size)
 	{
-		HAL_SPI_Transmit_DMA(&ST7789_SPI_PORT, buff, chunk_size);
+		//HAL_SPI_Transmit_DMA(&ST7789_SPI_PORT, buff, chunk_size);
+		SendBuff_DMA(buff, chunk_size);
 	}
 	else
 		HAL_SPI_Transmit(&ST7789_SPI_PORT, buff, chunk_size, HAL_MAX_DELAY);
@@ -799,38 +823,60 @@ void myfunc_SetAddressWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
 }
 
 
-void myfunc_DrawFilledRectangle(uint16_t* buf, uint16_t x0, uint16_t y0, uint16_t w, uint16_t h, uint16_t color){
+void myfunc_DrawFilledRectangle(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h, uint16_t color){
+	uint16_t* buffer;
+	if (buf1_busy == 1){
+		buffer = disp_buf2;
+	}
+	else{
+		buffer = disp_buf;
+	}
 	for(uint16_t x = x0; x < x0+w; x++){
 		for (uint16_t y = y0; y < y0+h; y++){
 			uint32_t pos = x+y*(myframe.x1-myframe.x0);
-			buf[pos] = color;
+			buffer[pos] = color;
 		}
 	}
 
 }
-
-void myfunc_UpdateFrame(uint16_t* buf){
+void myfunc_FillWithColor(uint16_t color){
+	if (buf1_busy == 1){
+		memset(disp_buf2, color, sizeof(disp_buf2));
+	}
+	else{
+		memset(disp_buf, color, sizeof(disp_buf));
+	}
+}
+void myfunc_UpdateFrame(){
 		ST7789_Select();
 		ST7789_DC_Set();
 		uint32_t sizeof_frame = sizeof(uint16_t)*(myframe.x1 - myframe.x0)*(myframe.y1 - myframe.y0);
-		myfunc_WriteData(disp_buf, sizeof_frame);
+		if (buf1_busy == 1){
+			myfunc_WriteData((uint8_t*)disp_buf2, sizeof_frame);
+			buf1_busy = 0;
+			//SendBuff_DMA((uint8_t*)disp_buf2, sizeof_frame);
+		}
+		else{
+			myfunc_WriteData((uint8_t*)disp_buf, sizeof_frame);
+			buf1_busy = 1;
+			//SendBuff_DMA((uint8_t*)disp_buf, sizeof_frame);
+		}
+
 		ST7789_UnSelect();
 }
 
 void myfunc_test(void){
 	srand(100);
-	myfunc_DrawFilledRectangle(disp_buf, 0, 0, 240, 320, (uint16_t) random() % 0xFFFF);
-	myfunc_UpdateFrame(disp_buf);
+	myfunc_DrawFilledRectangle(0, 0, 240, 320, (uint16_t) random() % 0xFFFF);
+	myfunc_UpdateFrame();
 
 	char string[64] = {0};
 	HAL_TIM_Base_Start_IT(&htim3);
 	myfunc_SetAddressWindow(0, 0, 239, 319);
-	uint8_t frames = 10;
+	uint8_t frames = 100;
 	for (uint8_t i = 0; i<frames; i++){
-		myfunc_DrawFilledRectangle(disp_buf, 0, 0, 240, 320, (uint16_t) random() % 0xFFFF);
-		myfunc_UpdateFrame(disp_buf);
-		myfunc_DrawFilledRectangle(disp_buf2, 0, 0, 240, 320, (uint16_t) random() % 0xFFFF);
-		myfunc_UpdateFrame(disp_buf2);
+		myfunc_DrawFilledRectangle(0, 0, 240, 320, (uint16_t) random() % 0xFFFF);
+		myfunc_UpdateFrame();
 	}
 	uint16_t time = timer;
 	uint16_t fps = frames * 100000/time;
