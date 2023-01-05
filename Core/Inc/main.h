@@ -46,7 +46,8 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-extern volatile uint16_t adc[2];
+extern volatile uint16_t adc1[2];
+extern volatile uint16_t adc2[2];
 extern ADC_HandleTypeDef hadc1;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim2;
@@ -64,16 +65,21 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define LED_Pin GPIO_PIN_3
 #define LED_GPIO_Port GPIOE
+#define POS1_X_Pin GPIO_PIN_0
+#define POS1_X_GPIO_Port GPIOA
+#define POS1_Y_Pin GPIO_PIN_1
+#define POS1_Y_GPIO_Port GPIOA
 #define ST7789_CS_Pin GPIO_PIN_2
 #define ST7789_CS_GPIO_Port GPIOA
 #define ST7789_RST_Pin GPIO_PIN_3
 #define ST7789_RST_GPIO_Port GPIOA
 #define ST7789_DC_Pin GPIO_PIN_4
 #define ST7789_DC_GPIO_Port GPIOA
-#define POS_X_Pin GPIO_PIN_5
-#define POS_X_GPIO_Port GPIOC
-#define POS_Y_Pin GPIO_PIN_0
-#define POS_Y_GPIO_Port GPIOB
+#define POS2_X_Pin GPIO_PIN_4
+#define POS2_X_GPIO_Port GPIOC
+#define POS2_Y_Pin GPIO_PIN_5
+#define POS2_Y_GPIO_Port GPIOC
+
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

@@ -36,7 +36,8 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-volatile uint16_t adc[2];
+volatile uint16_t adc1[2];
+volatile uint16_t adc2[2];
 uint8_t adc_ready = 0;
 uint16_t timer = 0;
 /* USER CODE END PM */
@@ -86,6 +87,53 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
   {
 	  adc_ready = 1;
   }
+}
+
+uint16_t read_adc(uint8_t num){
+	if(HAL_ADC_Start(&hadc1) != HAL_OK){
+		ST7789_WriteString(10, 100, "cant start adc regular", Font_16x26, BLACK, WHITE);
+		assert(0);
+	}
+	if(HAL_ADCEx_InjectedStart(&hadc1) != HAL_OK){
+		ST7789_WriteString(10, 100, "cant start adc injected", Font_16x26, BLACK, WHITE);
+		assert(0);
+	}
+	if (num == 0){
+		if(adc_ready == 1){
+			if(HAL_ADC_PollForConversion(&hadc1, 1) == HAL_OK){
+				return HAL_ADC_GetValue(&hadc1);
+			}
+			adc_ready = 0;
+		}
+	}
+	else if (num == 1){
+		if(adc_ready == 1){
+			if(HAL_ADCEx_InjectedPollForConversion(&hadc1, 1) == HAL_OK){
+				return HAL_ADCEx_InjectedGetValue(&hadc1, 1);
+				HAL_ADC_Stop(&hadc1);
+			}
+			adc_ready = 0;
+		}
+	}
+	else if (num == 2){
+		if(adc_ready == 1){
+			if(HAL_ADCEx_InjectedPollForConversion(&hadc1, 2) == HAL_OK){
+				return HAL_ADCEx_InjectedGetValue(&hadc1, 2);
+				HAL_ADC_Stop(&hadc1);
+			}
+			adc_ready = 0;
+		}
+	}
+	else if (num == 3){
+		if(adc_ready == 1){
+			if(HAL_ADCEx_InjectedPollForConversion(&hadc1, 3) == HAL_OK){
+				return HAL_ADCEx_InjectedGetValue(&hadc1, 3);
+				HAL_ADC_Stop(&hadc1);
+			}
+			adc_ready = 0;
+		}
+	}
+
 }
 /* USER CODE END 0 */
 
@@ -142,7 +190,9 @@ int main(void)
 
 
   myfunc_test();
-
+  myfunc_SetAddressWindow(0, 0, 239, 319);
+  myfunc_DrawFilledRectangle(0, 0, 240, 320, GREEN);
+  myfunc_UpdateFrame();
   //SnakeMain();
   /* USER CODE END 2 */
 
@@ -263,7 +313,7 @@ static void MX_ADC1_Init(void)
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   hadc1.Init.LowPowerAutoWait = DISABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
@@ -296,7 +346,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_8;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_8CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_32CYCLES_5;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
   sConfig.OffsetNumber = ADC_OFFSET_NONE;
   sConfig.Offset = 0;
@@ -308,19 +358,37 @@ static void MX_ADC1_Init(void)
 
   /** Configure Injected Channel
   */
-  sConfigInjected.InjectedChannel = ADC_CHANNEL_9;
+  sConfigInjected.InjectedChannel = ADC_CHANNEL_8;
   sConfigInjected.InjectedRank = ADC_INJECTED_RANK_1;
-  sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_8CYCLES_5;
+  sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_32CYCLES_5;
   sConfigInjected.InjectedSingleDiff = ADC_SINGLE_ENDED;
   sConfigInjected.InjectedOffsetNumber = ADC_OFFSET_NONE;
   sConfigInjected.InjectedOffset = 0;
-  sConfigInjected.InjectedNbrOfConversion = 1;
+  sConfigInjected.InjectedNbrOfConversion = 3;
   sConfigInjected.InjectedDiscontinuousConvMode = DISABLE;
   sConfigInjected.AutoInjectedConv = DISABLE;
   sConfigInjected.QueueInjectedContext = DISABLE;
   sConfigInjected.ExternalTrigInjecConv = ADC_INJECTED_SOFTWARE_START;
   sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_NONE;
   sConfigInjected.InjecOversamplingMode = DISABLE;
+  if (HAL_ADCEx_InjectedConfigChannel(&hadc1, &sConfigInjected) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Injected Channel
+  */
+  sConfigInjected.InjectedChannel = ADC_CHANNEL_16;
+  sConfigInjected.InjectedRank = ADC_INJECTED_RANK_2;
+  if (HAL_ADCEx_InjectedConfigChannel(&hadc1, &sConfigInjected) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Injected Channel
+  */
+  sConfigInjected.InjectedChannel = ADC_CHANNEL_17;
+  sConfigInjected.InjectedRank = ADC_INJECTED_RANK_3;
   if (HAL_ADCEx_InjectedConfigChannel(&hadc1, &sConfigInjected) != HAL_OK)
   {
     Error_Handler();
@@ -499,7 +567,6 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
