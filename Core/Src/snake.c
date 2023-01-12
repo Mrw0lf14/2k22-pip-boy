@@ -55,6 +55,7 @@ void SnakeClear(void){
 	myfunc_UpdateFrame();
 }
 void SnakeGetV(void){
+	/*
 	if(HAL_ADC_Start(&hadc1) != HAL_OK){
 		assert(0);
 	}
@@ -87,6 +88,7 @@ void SnakeGetV(void){
 	}
 	else
 		vy = 0;
+		*/
 }
 void SnakeMain(void)
 {

@@ -46,7 +46,8 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-extern volatile uint16_t adc[2];
+extern volatile uint16_t adc[4];
+extern uint8_t adc_conv_complited;
 extern ADC_HandleTypeDef hadc1;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim2;
@@ -70,12 +71,9 @@ void Error_Handler(void);
 #define ST7789_RST_GPIO_Port GPIOA
 #define ST7789_DC_Pin GPIO_PIN_4
 #define ST7789_DC_GPIO_Port GPIOA
-#define POS_X_Pin GPIO_PIN_5
-#define POS_X_GPIO_Port GPIOC
-#define POS_Y_Pin GPIO_PIN_0
-#define POS_Y_GPIO_Port GPIOB
-/* USER CODE BEGIN Private defines */
 
+/* USER CODE BEGIN Private defines */
+uint16_t read_adc(uint8_t num);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
