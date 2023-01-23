@@ -9,10 +9,11 @@ uint16_t DMA_MIN_SIZE = 16;
  * Then you can specify the framebuffer size to the full resolution below.
  */
 #define HOR_LEN 	80	//	Alse mind the resolution of your screen!
-uint16_t disp_buf[76800];
-uint16_t disp_buf2[76800];
-uint16_t* drawing_buf;
-uint16_t* prepare_buf;
+#define BUF_SIZE 153600
+uint8_t disp_buf[BUF_SIZE];
+uint8_t disp_buf2[BUF_SIZE];
+uint8_t* drawing_buf;
+uint8_t* prepared_buf;
 struct frame myframe;
 #endif
 
@@ -754,43 +755,50 @@ void ST7789_Test(void)
 /* My functions */
 //----------------------------------------------
 uint8_t buf1_busy = 0;
-void SendBuff_DMA(uint8_t *aTxBuff, uint16_t aCnt)
+uint8_t need_draw = 0;
+uint32_t drawing_buf_size = 0;
+uint8_t* temp_buf = 0;
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 {
+	if (hspi->Instance == SPI1)
+	{
+	    if (need_draw)
+	    {
+	    	if (drawing_buf_size > 0){
+	    		need_draw = 0;
+	    		myfunc_WriteData(temp_buf, drawing_buf_size);
+	    	}
 
-	while ((SPI1->SR & SPI_SR_TXP) == 0);
-
-	DMA1_Stream0->CR &= ~(DMA_SxCR_EN); 	//выключаем DMA
-
-	//SPI1->CFG1 |= SPI_CFG1_TXDMAEN;			//включить отправку с помощью DMA
-	DMA1_Stream0->NDTR = aCnt;				//записываем колличество передаваемых данных
-	DMA1_Stream0->M0AR = (uint32_t)aTxBuff;	//записываем адрес начала буффера
-	DMA1_Stream0->PAR = (uint32_t)(&SPI1->TXDR);
-
-	DMA1->LIFCR = DMA_LIFCR_CFEIF3 | DMA_LIFCR_CDMEIF3 | DMA_LIFCR_CTEIF3 | DMA_LIFCR_CHTIF3 | DMA_LIFCR_CTCIF3;
-
-
-	DMA1_Stream0->CR |= DMA_SxCR_EN;		//включаем DMA
-
-	SPI1->CR1 |= SPI_CR1_CSTART;				//начать отправлять данные
-	SPI1->IER |= SPI_IER_EOTIE | SPI_IER_RXPIE ; //включить прерывания spi
-
-
-}
-void myfunc_memset(uint16_t* buf, uint16_t color, uint16_t buflen){
-	for (uint16_t i; i<buflen; i++){
-		buf[i] = color;
+	    }
 	}
 }
-static void myfunc_WriteData(uint8_t *buff, size_t buff_size)
+
+void myfunc_memset(uint8_t* buf, uint16_t color, uint32_t buflen){
+	for (uint32_t i = 0; i<buflen; i+=2){
+		buf[i] = color >> 8;
+		buf[i+1] = color & 0xFF;
+	}
+}
+void myfunc_WriteData(uint8_t *buff, size_t buff_size)
 {
+	while (ST7789_SPI_PORT.hdmatx->State != HAL_DMA_STATE_READY);
+	ST7789_Select();
+	ST7789_DC_Set();
+
+	uint16_t chunk_size = buff_size > 51200 ? 51200 : buff_size;
+
 	// split data in small chunks because HAL can't send more than 64K at once
-	while (ST7789_SPI_PORT.hdmatx->State != HAL_DMA_STATE_READY){}
-	uint16_t chunk_size = buff_size > 65535 ? 65535 : buff_size;
 	HAL_SPI_Transmit_DMA(&ST7789_SPI_PORT, buff, chunk_size);
-	if(buff_size > 0){
-		buff += chunk_size;
-		buff_size -= chunk_size;
-		myfunc_WriteData(buff, buff_size);
+	if(buff_size > 51200)
+	{
+		need_draw = 1;
+
+		drawing_buf_size = buff_size - chunk_size;
+		temp_buf = buff + chunk_size;
+	}
+	else
+	{
+		need_draw = 0;
 	}
 }
 
@@ -819,7 +827,7 @@ void myfunc_SetAddressWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
 	}
 	/* Write to RAM */
 	ST7789_WriteCommand(ST7789_RAMWR);
-	ST7789_UnSelect();
+
 }
 
 
@@ -827,70 +835,42 @@ void myfunc_DrawFilledRectangle(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h
 	for(uint16_t x = x0; x < x0+w; x++){
 		for (uint16_t y = y0; y < y0+h; y++){
 			uint32_t pos = x+y*(myframe.x1-myframe.x0);
-			prepare_buf[pos] = color;
+			prepared_buf[pos] = color;
 		}
 	}
-
 }
 void myfunc_FillWithColor(uint16_t color){
-	myfunc_memset(prepare_buf, color, sizeof(disp_buf2));
+	myfunc_memset(prepared_buf, color, BUF_SIZE);
 }
 void myfunc_UpdateFrame(void){
-		ST7789_Select();
-		ST7789_DC_Set();
-		uint32_t sizeof_frame = sizeof(uint16_t)*(myframe.x1 - myframe.x0)*(myframe.y1 - myframe.y0);
-		myfunc_WriteData((uint8_t*)drawing_buf, sizeof_frame);
+	while (need_draw);
 
-		if(drawing_buf == disp_buf)
-		{
-			drawing_buf = disp_buf2;
-			prepare_buf = disp_buf;
-		}
-		else
-		{
-			drawing_buf = disp_buf;
-			prepare_buf = disp_buf2;
-		}
+	drawing_buf = prepared_buf;
+	uint32_t sizeof_frame = sizeof(uint16_t)*(myframe.x1 - myframe.x0)*(myframe.y1 - myframe.y0);
+	myfunc_WriteData(drawing_buf, sizeof_frame);
 
-		ST7789_UnSelect();
+	if(drawing_buf == disp_buf)
+	{
+		prepared_buf = disp_buf2;
+	}
+	else
+	{
+		prepared_buf = disp_buf;
+	}
 }
-void myfunc_test(void){
-	srand(100);
-	myfunc_DrawFilledRectangle(0, 0, 240, 320, 0xFFFF);
-	myfunc_UpdateFrame();
 
-	char string[64] = {0};
-
+void myfunc_test(void)
+{
 	myfunc_SetAddressWindow(0, 0, 239, 319);
-	uint8_t frames = 10;
-	HAL_TIM_Base_Start_IT(&htim3);
-	myfunc_DrawFilledRectangle(0, 0, 240, 320, BLUE);
-	myfunc_UpdateFrame();
-	myfunc_DrawFilledRectangle(0, 0, 240, 320, RED);
-	myfunc_UpdateFrame();
-	myfunc_DrawFilledRectangle(0, 0, 240, 320, YELLOW);
-	myfunc_UpdateFrame();
-	myfunc_DrawFilledRectangle(0, 0, 240, 320, CYAN);
-	myfunc_UpdateFrame();
-	myfunc_DrawFilledRectangle(0, 0, 240, 320, MAGENTA);
-	myfunc_UpdateFrame();
-	myfunc_DrawFilledRectangle(0, 0, 240, 320, BLACK);
-	myfunc_UpdateFrame();
-	myfunc_DrawFilledRectangle(0, 0, 240, 320, BLUE);
-	myfunc_UpdateFrame();
-	myfunc_DrawFilledRectangle(0, 0, 240, 320, GREEN);
-	myfunc_UpdateFrame();
-	myfunc_DrawFilledRectangle(0, 0, 240, 320, BLUE);
-	myfunc_UpdateFrame();
-	myfunc_DrawFilledRectangle(0, 0, 240, 320, GREEN);
-	myfunc_UpdateFrame();
-	uint16_t time = timer;
-	uint16_t fps = frames * 10000/time;
-	snprintf(string, sizeof(string), "FPS: %d.%d", fps/100, fps%100);
-	ST7789_WriteString(10, 10, string, Font_16x26, BLACK, WHITE);
-	snprintf(string, sizeof(string), "TIME: %d.%d", time/100, time%100);
-	ST7789_WriteString(10, 50, string, Font_16x26, BLACK, WHITE);
-
+	myfunc_memset(disp_buf, YELLOW, BUF_SIZE);
+	drawing_buf = disp_buf;
+	prepared_buf = disp_buf2;
+	for (uint8_t i = 0; i < 100; i++){
+		myfunc_UpdateFrame();
+		myfunc_memset(prepared_buf, BLUE+i*16, BUF_SIZE);
+	}
+	while (need_draw);
+	while (ST7789_SPI_PORT.hdmatx->State != HAL_DMA_STATE_READY);
 	while(1){
 		if (adc_conv_complited)
 		{
