@@ -296,6 +296,7 @@ void myfunc_SetAddressWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
 void myfunc_test(void);
 void myfunc_FillWithColor(uint16_t color);
 void myfunc_WriteData(uint8_t *buff, size_t buff_size);
+void myfunc_init(void);
 struct frame {
     uint16_t x0;
     uint16_t y0;

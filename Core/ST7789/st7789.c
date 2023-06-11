@@ -832,10 +832,11 @@ void myfunc_SetAddressWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
 
 
 void myfunc_DrawFilledRectangle(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h, uint16_t color){
-	for(uint16_t x = x0; x < x0+w; x++){
-		for (uint16_t y = y0; y < y0+h; y++){
-			uint32_t pos = x+y*(myframe.x1-myframe.x0);
-			prepared_buf[pos] = color;
+	for(uint16_t y = 0; y < h; y++){
+		for (uint16_t x = 0; x < w*2; x+=2){
+			uint32_t pos = x0*2+x+(y0+y)*(myframe.x1-myframe.x0)*2;
+			prepared_buf[pos] = color >> 8;
+			prepared_buf[pos+1] = color & 0xFF;
 		}
 	}
 }
@@ -858,19 +859,30 @@ void myfunc_UpdateFrame(void){
 		prepared_buf = disp_buf;
 	}
 }
-
+void myfunc_init(void){
+	myfunc_SetAddressWindow(0, 0, 239, 319);
+	myfunc_memset(disp_buf, YELLOW, BUF_SIZE);
+	drawing_buf = disp_buf2;
+	prepared_buf = disp_buf;
+}
 void myfunc_test(void)
 {
 	myfunc_SetAddressWindow(0, 0, 239, 319);
 	myfunc_memset(disp_buf, YELLOW, BUF_SIZE);
-	drawing_buf = disp_buf;
-	prepared_buf = disp_buf2;
+	drawing_buf = disp_buf2;
+	prepared_buf = disp_buf;
+	srand(5);
+	timer = 0;
+	HAL_TIM_Base_Start_IT(&htim3);
 	for (uint8_t i = 0; i < 100; i++){
 		myfunc_UpdateFrame();
-		myfunc_memset(prepared_buf, BLUE+i*16, BUF_SIZE);
+		myfunc_memset(prepared_buf, (uint16_t)rand(), BUF_SIZE);
 	}
 	while (need_draw);
 	while (ST7789_SPI_PORT.hdmatx->State != HAL_DMA_STATE_READY);
+	uint32_t tstop = timer;
+
+	float fps = (float)10000 / tstop;
 	while(1){
 		if (adc_conv_complited)
 		{
@@ -880,6 +892,9 @@ void myfunc_test(void)
 		char string[64] = {0};
 		snprintf(string, sizeof(string), "POS: %d.%d.%d.%d  ", adc[0], adc[1], adc[2], adc[3]);
 		ST7789_WriteString(10, 100, string, Font_7x10, BLACK, WHITE);
+		memset(string, 0, 64);
+		snprintf(string, sizeof(string), "FPS: %.2f", fps);
+		ST7789_WriteString(10, 120, string, Font_7x10, BLACK, WHITE);
 
 	}
 }

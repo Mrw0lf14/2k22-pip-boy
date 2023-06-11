@@ -32,6 +32,7 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdlib.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -52,9 +53,10 @@ extern ADC_HandleTypeDef hadc1;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim2;
 extern uint16_t timer;
-extern uint8_t adc_ready;
 #define swap(x,y)  uint16_t* temp = x; x = y; y = temp;
 /* USER CODE END EM */
+
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
@@ -66,14 +68,12 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define LED_Pin GPIO_PIN_3
 #define LED_GPIO_Port GPIOE
-#define ST7789_CS_Pin GPIO_PIN_2
-#define ST7789_CS_GPIO_Port GPIOA
-#define ST7789_RST_Pin GPIO_PIN_3
-#define ST7789_RST_GPIO_Port GPIOA
-#define ST7789_DC_Pin GPIO_PIN_4
-#define ST7789_DC_GPIO_Port GPIOA
-#define SD_CS_Pin GPIO_PIN_11
-#define SD_CS_GPIO_Port GPIOB
+#define ST7789_DC_Pin GPIO_PIN_7
+#define ST7789_DC_GPIO_Port GPIOE
+#define ST7789_RST_Pin GPIO_PIN_8
+#define ST7789_RST_GPIO_Port GPIOE
+#define ST7789_CS_Pin GPIO_PIN_9
+#define ST7789_CS_GPIO_Port GPIOE
 
 /* USER CODE BEGIN Private defines */
 uint16_t read_adc(uint8_t num);

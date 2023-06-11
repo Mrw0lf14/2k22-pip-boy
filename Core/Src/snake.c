@@ -26,6 +26,10 @@ void SnakeUpdatePos(void)
 	if(snake[0].x > FIELDSIZE){
 		snake[0].x = 0;
 	}
+
+	if(snake[0].y > FIELDSIZE){
+		snake[0].y = 0;
+	}
 }
 
 void SnakeCheckApple(void)
@@ -50,24 +54,8 @@ void SnakeDraw(void)
 	}
 	myfunc_DrawFilledRectangle(apple.x * CELLSIZE, apple.y * CELLSIZE, CELLSIZE, CELLSIZE, RED);
 }
-void SnakeClear(void){
-	myfunc_FillWithColor(BLACK);
-	myfunc_UpdateFrame();
-}
+
 void SnakeGetV(void){
-	/*
-	if(HAL_ADC_Start(&hadc1) != HAL_OK){
-		assert(0);
-	}
-	if(HAL_ADC_PollForConversion(&hadc1, 1) == HAL_OK){
-		adc[0] = HAL_ADC_GetValue(&hadc1);
-	}
-	if(HAL_ADCEx_InjectedStart(&hadc1) != HAL_OK){
-		assert(0);
-	}
-	if(HAL_ADCEx_InjectedPollForConversion(&hadc1, 1) == HAL_OK){
-		adc[1] = HAL_ADCEx_InjectedGetValue(&hadc1, 1);
-	}
 	if (adc[0] > 3000){
 		vx = 1;
 		vy = 0;
@@ -77,7 +65,9 @@ void SnakeGetV(void){
 		vy = 0;
 	}
 	else
-		vx = 0;
+	{
+		//vx = 0;
+	}
 	if (adc[1] > 3000){
 		vy = -1;
 		vx = 0;
@@ -87,8 +77,9 @@ void SnakeGetV(void){
 		vx = 0;
 	}
 	else
-		vy = 0;
-		*/
+	{
+		//vy = 0;
+	}
 }
 void SnakeMain(void)
 {
@@ -97,12 +88,18 @@ void SnakeMain(void)
 	apple.y = 8;
 	HAL_TIM_Base_Start_IT(&htim2);
 	srand(10);
-	myfunc_SetAddressWindow(0, 0, 239, 319);
+	myfunc_SetAddressWindow(0, 0, 239, 239);
+	HAL_Delay(100);
 	SnakeDraw();
 	timFlag = 0;
 	//SnakeReset();
 	while (1) {
-
+		if (adc_conv_complited)
+		{
+			HAL_ADCEx_InjectedStart_IT(&hadc1);
+			adc_conv_complited = 0;
+		}
+		HAL_Delay(20);
 		if(timFlag == 1){
 			myfunc_UpdateFrame();
 			SnakeGetV();
@@ -111,6 +108,6 @@ void SnakeMain(void)
 			SnakeCheckApple();
 			timFlag = 0;
 		}
-		myfunc_SetAddressWindow(0, 0, 239, 319);
+		//myfunc_SetAddressWindow(0, 0, 239, 319);
 	}
 }
